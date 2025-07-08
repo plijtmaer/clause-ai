@@ -20,13 +20,17 @@ interface ChatProps {
 export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatProps) {
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const prevMessageCount = useRef(0)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
   useEffect(() => {
-    scrollToBottom()
+    if (messages.length > prevMessageCount.current) {
+      scrollToBottom()
+    }
+    prevMessageCount.current = messages.length
   }, [messages])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -100,19 +104,14 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
     )
   }
 
-  return (
-    <div className="flex flex-col h-full bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
+  return messages.length === 0 && !isLoading ? (
+    <div className="h-32 max-h-32 overflow-hidden flex items-center justify-center text-white/70 text-sm border border-white/20 rounded-2xl bg-white/5 backdrop-blur-sm">
+      Ready to analyze — paste a URL to begin.
+    </div>
+  ) : (
+    <div className="flex flex-col h-full max-h-full bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Bot className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-white font-semibold text-lg mb-2">Ready to Analyze</h3>
-            <p className="text-white/60">Paste a URL to a privacy policy or terms of service to get started</p>
-          </div>
-        )}
+      <div className="flex-1 overflow-y-auto p-2 space-y-4">
 
         {messages.map((message, index) => (
           <div key={index} className="space-y-4">
@@ -245,13 +244,13 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
             disabled={isLoading}
             className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20"
           />
-          <Button
+          <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 px-6"
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 px-6 rounded-md flex items-center justify-center"
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </Button>
+          </button>
         </form>
       </div>
     </div>

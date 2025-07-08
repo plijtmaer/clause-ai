@@ -95,7 +95,7 @@ export default function Home() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+    <div className="h-screen grid grid-rows-[auto,1fr,auto] bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
@@ -106,22 +106,22 @@ export default function Home() {
       {/* Grid Pattern Overlay */}
       <div className="absolute inset-0 bg-grid-pattern opacity-40"></div>
 
-      <div className="relative z-10 container mx-auto px-4 py-8 flex flex-col min-h-screen">
+      <div className="relative z-10 container mx-auto px-4 py-8 overflow-hidden flex flex-col gap-4">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-2">
           <div className="inline-flex items-center gap-3 mb-6 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
             <Sparkles className="w-5 h-5 text-yellow-400" />
             <span className="text-white/90 font-medium">AI-Powered Legal Analysis</span>
             <Zap className="w-5 h-5 text-blue-400" />
           </div>
 
-          <h1 className="text-6xl font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent mb-4 leading-tight">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent mb-4 leading-tight">
             Clause AI
             <br />
-            <span className="text-5xl">Analyzer</span>
+            <span className="text-base">Analyzer</span>
           </h1>
 
-          <p className="text-xl text-white/70 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg text-white/70 max-w-2xl mx-auto leading-relaxed">
             Decode complex legal documents with AI. Get instant insights into privacy policies, terms of service, and
             data collection practices.
           </p>
@@ -159,14 +159,14 @@ export default function Home() {
 
         {/* Example Queries */}
         {messages.length === 0 && (
-          <div className="mb-8">
-            <h3 className="text-white/80 text-center mb-6 text-lg font-medium">Try these examples:</h3>
+          <div className="mb-1">
+            <h3 className="text-white/80 text-center mb-2 text-sm font-medium">Try these examples:</h3>
             <div className="flex flex-wrap justify-center gap-3">
               {exampleQueries.map((query, index) => (
                 <button
                   key={index}
                   onClick={() => handleSendMessage(query)}
-                  className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 text-white/80 hover:bg-white/20 hover:text-white hover:scale-105 transition-all duration-300 text-sm font-medium"
+                  className="px-1 py-0.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 text-white/80 hover:bg-white/20 hover:text-white hover:scale-105 transition-all duration-300 text-[10px] font-medium"
                 >
                   {query}
                 </button>
@@ -176,7 +176,7 @@ export default function Home() {
         )}
 
         {/* Chat Interface */}
-        <div className="flex-1 max-w-6xl mx-auto w-full">
+        <div className="w-full mt-8">
           <Chat onSendMessage={handleSendMessage} messages={messages} isLoading={isLoading} mode="terms" />
         </div>
       </div>
