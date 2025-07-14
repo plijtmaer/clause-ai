@@ -1,98 +1,37 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useRef, useEffect } from "react"
-import Button from "@/components/ui/button"
-import Input from "@/components/ui/input"
+import { useRef, useEffect } from "react"
 import Card from "@/components/ui/card"
 import Badge from "@/components/ui/badge"
 import type { Message } from "@/types/chat"
-import { Send, User, Bot, ExternalLink, CheckCircle, XCircle, Loader2, Shield, FileText, BarChart3, Link, Type } from "lucide-react"
-import ProgressStatus from "@/components/progress-status"
+import { 
+  User, 
+  Bot, 
+  ExternalLink, 
+  CheckCircle, 
+  XCircle, 
+  Loader2, 
+  Shield, 
+  FileText, 
+  BarChart3 
+} from "lucide-react"
 
-interface ChatProps {
-  onSendMessage: (message: string) => void
+interface AnalysisResultsProps {
   messages: Message[]
-  isLoading: boolean
-  mode: string
 }
 
-export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatProps) {
-  const [input, setInput] = useState("")
-  const [inputMode, setInputMode] = useState<"url" | "text">("url")
-  const [progress, setProgress] = useState<{ step: number; total: number; message: string; status: 'pending' | 'in_progress' | 'completed' | 'error' } | null>(null)
+export default function AnalysisResults({ messages }: AnalysisResultsProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const prevMessageCount = useRef(0)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
   useEffect(() => {
-    if (messages.length > prevMessageCount.current) {
+    if (messages.length > 0) {
       scrollToBottom()
     }
-    prevMessageCount.current = messages.length
   }, [messages])
-
-  // Update progress when loading starts
-  useEffect(() => {
-    if (isLoading && !progress) {
-      setProgress({ step: 1, total: 4, message: "Starting analysis...", status: 'in_progress' })
-    } else if (!isLoading && progress) {
-      setProgress(null)
-    }
-  }, [isLoading, progress])
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (input.trim() && !isLoading) {
-      onSendMessage(input.trim())
-      setInput("")
-    }
-  }
-
-  const validateInput = () => {
-    if (inputMode === "url") {
-      const url = input.trim()
-      try {
-        new URL(url)
-        return url.startsWith("http://") || url.startsWith("https://")
-      } catch {
-        return false
-      }
-    } else {
-      const text = input.trim()
-      return text.length > 20 && text.split(' ').length > 3 // Minimum meaningful text
-    }
-  }
-
-  const getValidationMessage = () => {
-    if (!input.trim()) return null
-    
-    if (inputMode === "url") {
-      const url = input.trim()
-      if (!url.startsWith("http://") && !url.startsWith("https://")) {
-        return "⚠️ Please enter a valid URL starting with http:// or https://"
-      }
-      try {
-        new URL(url)
-        return "✅ Valid URL"
-      } catch {
-        return "⚠️ Please enter a valid URL"
-      }
-    } else {
-      const text = input.trim()
-      if (text.length < 20) {
-        return "⚠️ Please enter at least 20 characters"
-      }
-      if (text.split(' ').length < 3) {
-        return "⚠️ Please enter meaningful text (at least 3 words)"
-      }
-      return "✅ Ready to analyze"
-    }
-  }
 
   const getToolIcon = (toolName: string) => {
     switch (toolName) {
@@ -204,24 +143,28 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
     )
   }
 
-  return (
-    <div className="flex flex-col h-full bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4" style={{ minHeight: '500px', maxHeight: '70vh' }}>
-        {messages.length === 0 && !isLoading && (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center text-white/70 text-sm">
-              <div className="mb-4">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                  <FileText className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-lg font-medium text-white mb-2">Ready to analyze</h3>
-                <p className="text-white/60">Choose URL or Text mode below to begin analyzing your legal document.</p>
-              </div>
-            </div>
-          </div>
-        )}
+  if (messages.length === 0) {
+    return (
+      <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 p-8 text-center">
+        <div className="text-white/60">
+          <FileText className="w-12 h-12 mx-auto mb-4 text-white/40" />
+          <p className="text-lg font-medium mb-2">No analysis yet</p>
+          <p className="text-sm">Submit a document above to see the analysis results here.</p>
+        </div>
+      </div>
+    )
+  }
 
+  return (
+    <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
+      <div className="p-6 border-b border-white/10">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <BarChart3 className="w-5 h-5" />
+          Analysis Results
+        </h2>
+      </div>
+
+      <div className="max-h-[600px] overflow-y-auto p-6 space-y-6">
         {messages.map((message, index) => (
           <div key={index} className="space-y-4">
             {/* User Message */}
@@ -231,7 +174,7 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
               </div>
               <div className="flex-1">
                 <div className="bg-white/10 rounded-2xl rounded-tl-sm p-4 border border-white/20">
-                  <p className="text-white">{message.content}</p>
+                  <p className="text-white text-sm">{message.content}</p>
                 </div>
               </div>
             </div>
@@ -262,7 +205,7 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
                 <div className="flex-1">
                   <div className="bg-white/10 rounded-2xl rounded-tl-sm p-4 border border-white/20">
                     <div className="prose prose-invert max-w-none">
-                      <p className="text-white whitespace-pre-wrap leading-relaxed">{message.response}</p>
+                      <p className="text-white whitespace-pre-wrap leading-relaxed text-sm">{message.response}</p>
                     </div>
 
                     {/* Privacy Score Display */}
@@ -300,14 +243,12 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
                                     </Badge>
                                   )}
                                   {source.url && source.url !== "#analysis" && source.url !== "#score" && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/10"
+                                    <button
                                       onClick={() => window.open(source.url, "_blank")}
+                                      className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center justify-center"
                                     >
                                       <ExternalLink className="w-3 h-3" />
-                                    </Button>
+                                    </button>
                                   )}
                                 </div>
                               </div>
@@ -322,113 +263,8 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
             )}
           </div>
         ))}
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <Bot className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="bg-white/10 rounded-2xl rounded-tl-sm p-4 border border-white/20">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
-                  <span className="text-white/70">Analyzing document...</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-                 {/* Progress Status */}
-         {progress && (
-           <ProgressStatus
-             progress={progress}
-             isVisible={true}
-           />
-         )}
-
+        
         <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="flex-shrink-0 p-6 border-t border-white/10 bg-white/5">
-        {/* Mode Selector */}
-        <div className="flex gap-2 mb-4">
-          <button
-            type="button"
-            onClick={() => {
-              setInputMode("url")
-              setInput("")
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              inputMode === "url"
-                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                : "bg-white/10 text-white/70 hover:bg-white/15 hover:text-white"
-            }`}
-          >
-            <Link className="w-4 h-4" />
-            URL
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setInputMode("text")
-              setInput("")
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              inputMode === "text"
-                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                : "bg-white/10 text-white/70 hover:bg-white/15 hover:text-white"
-            }`}
-          >
-            <Type className="w-4 h-4" />
-            Text
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex gap-4 items-end">
-          {inputMode === "url" ? (
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Paste document URL (e.g., https://example.com/privacy-policy)"
-              disabled={isLoading}
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20 h-12"
-            />
-          ) : (
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Paste legal document text here (Privacy Policy, Terms of Service, NDA, Contract, EULA, etc.)"
-              disabled={isLoading}
-              rows={5}
-              className="flex-1 bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-md px-3 py-2 resize-none"
-            />
-          )}
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading || !validateInput()}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 px-8 py-3 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed self-end min-w-[80px]"
-          >
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </button>
-        </form>
-
-        {/* Helper text */}
-        <div className="mt-3 text-sm text-white/60">
-          {getValidationMessage() ? (
-            <span className={getValidationMessage()?.startsWith("✅") ? "text-green-400 font-medium" : "text-yellow-400 font-medium"}>
-              {getValidationMessage()}
-            </span>
-          ) : (
-            inputMode === "url" ? (
-              <span>📄 Paste a URL to fetch and analyze a legal document</span>
-            ) : (
-              <span>📝 Paste the full text of a legal document to analyze</span>
-            )
-          )}
-        </div>
       </div>
     </div>
   )

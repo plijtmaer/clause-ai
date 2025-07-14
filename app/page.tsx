@@ -44,11 +44,24 @@ export default function Home() {
       })
     } catch (error) {
       console.error("Error sending message:", error)
+      
+      let errorMessage = "Sorry, I encountered an error while processing your request. Please try again."
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          errorMessage = "⏱️ Request timed out. Please try again with a shorter document or check your internet connection."
+        } else if (error.message.includes('fetch')) {
+          errorMessage = "🌐 Unable to fetch the document. Please check the URL and try again."
+        } else if (error.message.includes('rate limit')) {
+          errorMessage = "🚫 Rate limit exceeded. Please wait a moment and try again."
+        }
+      }
 
       setMessages((prev) => {
         const updated = [...prev]
         const lastMessage = updated[updated.length - 1]
-        lastMessage.response = "Sorry, I encountered an error while processing your request. Please try again."
+        lastMessage.response = errorMessage
         return updated
       })
     } finally {
@@ -87,10 +100,8 @@ export default function Home() {
     },
   ]
 
-
-
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
@@ -101,74 +112,60 @@ export default function Home() {
       {/* Grid Pattern Overlay */}
       <div className="absolute inset-0 bg-grid-pattern opacity-40"></div>
 
-      <div className="relative z-10 h-full flex flex-col">
-        {messages.length === 0 ? (
-          <div className="container mx-auto px-4 py-6 flex flex-col gap-4">
-            {/* Header */}
-            <div className="text-center mb-2">
-              <div className="inline-flex items-center gap-3 mb-6 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-                <Sparkles className="w-5 h-5 text-yellow-400" />
-                <span className="text-white/90 font-medium">AI-Powered Legal Analysis</span>
-                <Zap className="w-5 h-5 text-blue-400" />
-              </div>
-
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent mb-4 leading-tight">
-                Clause AI
-                <br />
-                <span className="text-base">Analyzer</span>
-              </h1>
-
-              <p className="text-lg text-white/70 max-w-2xl mx-auto leading-relaxed">
-                Decode complex legal documents with AI. Analyze privacy policies, terms of service, NDAs, contracts, and 
-                EULAs to understand risks and protect your rights.
-              </p>
+      <div className="relative z-10">
+        <div className="container mx-auto px-4 py-6">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-3 mb-6 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
+              <Sparkles className="w-5 h-5 text-yellow-400" />
+              <span className="text-white/90 font-medium">AI-Powered Legal Analysis</span>
+              <Zap className="w-5 h-5 text-blue-400" />
             </div>
 
-            {/* Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
-              {features.map((feature, index) => (
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent mb-4 leading-tight">
+              Clause AI
+              <br />
+              <span className="text-2xl">Analyzer</span>
+            </h1>
+
+            <p className="text-lg text-white/70 max-w-2xl mx-auto leading-relaxed mb-8">
+              Decode complex legal documents with AI. Analyze privacy policies, terms of service, NDAs, contracts, and
+              EULAs to understand risks and protect your rights.
+            </p>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {features.map((feature, index) => (
+              <div
+                key={feature.title}
+                className="group relative bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-500 hover:scale-105 hover:-translate-y-2"
+                style={{ animationDelay: feature.delay }}
+              >
                 <div
-                  key={feature.title}
-                  className="group relative bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-500 hover:scale-105 hover:-translate-y-2"
-                  style={{ animationDelay: feature.delay }}
+                  className={`w-12 h-12 rounded-xl bg-gradient-to-r ${feature.color} p-3 mb-4 group-hover:scale-110 transition-transform duration-300`}
                 >
-                  <div
-                    className={`w-12 h-12 rounded-xl bg-gradient-to-r ${feature.color} p-3 mb-4 group-hover:scale-110 transition-transform duration-300`}
-                  >
-                    <feature.icon className="w-full h-full text-white" />
-                  </div>
-
-                  <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-purple-200 transition-colors">
-                    {feature.title}
-                  </h3>
-
-                  <p className="text-white/60 text-sm leading-relaxed group-hover:text-white/80 transition-colors">
-                    {feature.description}
-                  </p>
-
-                  {/* Hover Glow Effect */}
-                  <div
-                    className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${feature.color} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-xl`}
-                  ></div>
+                  <feature.icon className="w-full h-full text-white" />
                 </div>
-              ))}
-            </div>
 
+                <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-purple-200 transition-colors">
+                  {feature.title}
+                </h3>
 
+                <p className="text-white/60 text-sm leading-relaxed group-hover:text-white/80 transition-colors">
+                  {feature.description}
+                </p>
+
+                {/* Hover Glow Effect */}
+                <div
+                  className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${feature.color} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-xl`}
+                ></div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="container mx-auto px-4 py-1">
-            <div className="text-center mb-1">
-              <h1 className="text-lg font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent">
-                Clause AI Analyzer
-              </h1>
-            </div>
-          </div>
-        )}
 
-        {/* Chat Interface - Always visible and takes remaining space */}
-        <div className="flex-1 container mx-auto px-4 pb-4" style={{ minHeight: '600px' }}>
-          <div className="h-full">
+          {/* Chat Interface */}
+          <div className="mt-8">
             <Chat onSendMessage={handleSendMessage} messages={messages} isLoading={isLoading} mode="terms" />
           </div>
         </div>

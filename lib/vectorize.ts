@@ -56,6 +56,7 @@ export class VectorizeService {
     return documents.map((doc) => ({
       id: doc.id,
       title: doc.source_display_name || doc.source,
+      source: doc.source,
       url: doc.source,
       snippet: doc.text, // Full text content for hover display
       relevancy: doc.relevancy,

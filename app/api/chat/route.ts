@@ -2,231 +2,236 @@ import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { urlContentFetcherTool, termsAnalyzerTool, privacyPolicyScorerTool, directTextAnalyzerTool } from "@/lib/tools"
 
+// Progress tracking interface
+interface ProgressStep {
+  step: number
+  total: number
+  message: string
+  status: 'pending' | 'in_progress' | 'completed' | 'error'
+}
+
 export async function POST(request: Request) {
   try {
     const { message, mode } = await request.json()
+    
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 90000) // 90 second timeout
 
-    // Use Terms Analysis tools
-    const tools = {
-      urlContentFetcher: urlContentFetcherTool,
-      directTextAnalyzer: directTextAnalyzerTool,
-      termsAnalyzer: termsAnalyzerTool,
-      privacyPolicyScorer: privacyPolicyScorerTool,
+    // DETERMINISTIC FLOW - No dependency on AI model decisions
+    const isUrl = message.startsWith('http://') || message.startsWith('https://')
+    const isLongText = message.split(/\s+/).length > 100
+    
+    // Progress tracking
+    const sendProgress = (step: ProgressStep) => {
+      // In a real implementation, this would use Server-Sent Events or WebSockets
+      console.log(`Progress: ${step.step}/${step.total} - ${step.message}`)
     }
 
-    const systemPrompt = `You are Clause AI, a specialized legal document analyzer that helps users understand complex legal agreements. You excel at analyzing Privacy Policies, Terms of Service, NDAs, Contracts, EULAs, and other legal documents to make them accessible and understandable.
-
-CORE CAPABILITIES:
-1. urlContentFetcher: Fetch and extract content from any legal document URL
-2. directTextAnalyzer: Process legal document text that has been pasted directly
-3. termsAnalyzer: Deep analysis of legal content to identify key clauses, risks, and practices
-4. privacyPolicyScorerTool: Generate comprehensive scores and recommendations
-
-INPUT DETECTION:
-- If the user input starts with "http://" or "https://", use urlContentFetcher
-- If the user input is a large block of text (>100 words) or contains legal language, use directTextAnalyzer
-- If the user input is a short request or question, ask for clarification about what document they want to analyze
-
-DOCUMENT TYPES SUPPORTED:
-- Privacy Policies: Data collection, user rights, sharing practices
-- Terms of Service: User obligations, platform rights, liability
-- NDAs: Confidentiality scope, restrictions, obligations
-- Contracts: Obligations, liability, termination clauses
-- EULAs: Software rights, restrictions, warranties
-- Cookie Policies: Tracking, consent, data usage
-
-ANALYSIS WORKFLOW:
-1. INPUT PROCESSING: 
-   - For URLs: Use urlContentFetcher to extract content
-   - For pasted text: Use directTextAnalyzer to process content
-2. ANALYZE: Comprehensive analysis covering:
-   - Data collection practices and transparency
-   - User rights and control mechanisms
-   - Third-party sharing and partnerships
-   - Security measures and breach protocols
-   - Risk factors and concerning clauses
-   - Contract-specific terms (for contracts/NDAs)
-   - Confidentiality terms (for NDAs)
-
-3. SCORE: Generate weighted scores based on document type:
-   - Privacy Policies: Focus on data protection and user rights
-   - Terms of Service: Balance user protection with platform needs
-   - NDAs: Emphasis on confidentiality scope and fairness
-   - Contracts: Focus on obligations and liability balance
-
-4. SUMMARIZE: Provide clear, actionable insights including:
-   - Document summary in plain language
-   - Key findings and important clauses
-   - Risk assessment with specific concerns
-   - Comprehensive scoring with breakdown
-   - Practical recommendations for users
-
-SCORING WEIGHTS (vary by document type):
-- Privacy Policies: User Rights (35%), Data Collection (25%), Data Sharing (25%), Security (15%)
-- Terms of Service: User Rights (30%), Data Sharing (30%), Data Collection (20%), Security (20%)
-- NDAs: Data Sharing (35%), Security (30%), User Rights (20%), Data Collection (15%)
-- Contracts: Security (35%), Data Sharing (30%), User Rights (25%), Data Collection (10%)
-
-RESPONSE STYLE:
-- Be direct and informative, not conversational
-- Use clear, jargon-free language
-- Highlight important risks and red flags
-- Provide specific, actionable recommendations
-- Focus on what users need to know to make informed decisions
-- Always include the comprehensive score and breakdown
-
-RISK ASSESSMENT:
-Identify and flag high-risk terms like:
-- Unlimited liability or broad termination rights
-- Excessive data collection without clear purpose
-- Broad sharing with third parties
-- Weak security measures or breach protocols
-- Unfair contract terms or indefinite obligations
-
-Remember: Your goal is to empower users with clear, accurate information about what they're agreeing to when they accept legal documents.`
-
-    const result = await generateText({
-      model: openai("gpt-4o-mini"),
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: message },
-      ],
-      tools: tools,
-      maxSteps: 5,
-    })
-
-    // Extract sources and tool results for the frontend
-    const sources: any[] = []
-    const toolResults: any[] = []
-
-    // Process tool calls and results
-    if (result.steps) {
-      for (const step of result.steps) {
-        if (step.toolCalls) {
-          for (const toolCall of step.toolCalls) {
-            if (toolCall.type === "tool-call") {
-              toolResults.push({
-                toolName: toolCall.toolName,
-                result: toolCall.args,
-                success: true,
-                error: undefined,
-              })
-            }
-          }
+    let documentContent = ""
+    let documentType = "terms"
+    let analysisResult: any = null
+    let scoreResult: any = null
+    
+    // STEP 1: Content Extraction
+    sendProgress({ step: 1, total: 4, message: "Extracting document content...", status: 'in_progress' })
+    
+    try {
+      if (isUrl) {
+        const urlResult = await urlContentFetcherTool.execute({ url: message, documentType: "terms" })
+        if (urlResult.success) {
+          documentContent = urlResult.content
+          documentType = urlResult.documentType
+          sendProgress({ step: 1, total: 4, message: "Document content extracted successfully", status: 'completed' })
+        } else {
+          throw new Error(urlResult.error || "Failed to fetch URL content")
         }
-
-        if (step.toolResults) {
-          for (const toolResult of step.toolResults) {
-            const existingIndex = toolResults.findIndex((tr) => tr.toolName === toolResult.toolName)
-            if (existingIndex >= 0) {
-              toolResults[existingIndex] = {
-                toolName: toolResult.toolName,
-                result: toolResult.result,
-                success: !toolResult.result?.error,
-                error: toolResult.result?.error,
-              }
-            } else {
-              toolResults.push({
-                toolName: toolResult.toolName,
-                result: toolResult.result,
-                success: !toolResult.result?.error,
-                error: toolResult.result?.error,
-              })
-            }
-
-            // Extract sources from URL content fetcher
-            if (
-              toolResult.toolName === "urlContentFetcher" &&
-              toolResult.result &&
-              typeof toolResult.result === "object" &&
-              "success" in toolResult.result &&
-              toolResult.result.success
-            ) {
-              const result = toolResult.result as any
-              if (result.url) {
-                sources.push({
-                  title: result.title || "Legal Document",
-                  snippet: `${result.documentType} document (${result.wordCount} words, ~${result.readingTimeMinutes} min read)`,
-                  url: result.url,
-                  source: result.documentType === "privacy" ? "Privacy Policy" : "Terms of Service",
-                })
-              }
-            }
-
-            // Extract sources from direct text analyzer
-            if (
-              toolResult.toolName === "directTextAnalyzer" &&
-              toolResult.result &&
-              typeof toolResult.result === "object" &&
-              "success" in toolResult.result &&
-              toolResult.result.success
-            ) {
-              const result = toolResult.result as any
-              sources.push({
-                title: result.title || "Pasted Legal Document",
-                snippet: `${result.documentType} document (${result.wordCount} words, ~${result.readingTimeMinutes} min read)`,
-                url: "#pasted-text",
-                source: "Pasted Text",
-              })
-            }
-
-            // Extract analysis results as sources
-            if (
-              toolResult.toolName === "termsAnalyzer" &&
-              toolResult.result &&
-              typeof toolResult.result === "object" &&
-              "success" in toolResult.result &&
-              toolResult.result.success
-            ) {
-              const result = toolResult.result as any
-              sources.push({
-                title: `Analysis Results`,
-                snippet: `Analyzed ${result.documentType} document with ${result.wordCount} words`,
-                url: "#analysis",
-                source: "Analysis",
-              })
-            }
-
-            // Extract privacy score as source
-            if (
-              toolResult.toolName === "privacyPolicyScorer" &&
-              toolResult.result &&
-              typeof toolResult.result === "object" &&
-              "success" in toolResult.result &&
-              toolResult.result.success
-            ) {
-              const result = toolResult.result as any
-              sources.push({
-                title: `Privacy Score: ${result.overallScore}/100`,
-                snippet: `Rating: ${result.rating} - ${result.recommendations?.length || 0} recommendations`,
-                url: "#score",
-                source: "Privacy Score",
-              })
-            }
-          }
+      } else if (isLongText) {
+        const textResult = await directTextAnalyzerTool.execute({ content: message, documentType: "terms" })
+        if (textResult.success) {
+          documentContent = textResult.content
+          documentType = textResult.documentType
+          sendProgress({ step: 1, total: 4, message: "Text content processed successfully", status: 'completed' })
+        } else {
+          throw new Error(textResult.error || "Failed to process text content")
         }
+      } else {
+        throw new Error("Please provide a valid URL or paste the document text (minimum 100 words)")
       }
+    } catch (error) {
+      sendProgress({ step: 1, total: 4, message: "Failed to extract content", status: 'error' })
+      throw error
     }
 
-    return new Response(
-      JSON.stringify({
-        response: result.text,
-        sources: sources,
-        toolResults: toolResults,
-      }),
-      {
-        headers: { "Content-Type": "application/json" },
-      },
-    )
+    // STEP 2: Document Analysis
+    sendProgress({ step: 2, total: 4, message: "Analyzing document structure and content...", status: 'in_progress' })
+    
+    try {
+      analysisResult = await termsAnalyzerTool.execute({ content: documentContent, documentType: documentType as any })
+      if (analysisResult.success) {
+        sendProgress({ step: 2, total: 4, message: "Document analysis completed", status: 'completed' })
+      } else {
+        throw new Error(analysisResult.error || "Failed to analyze document")
+      }
+    } catch (error) {
+      sendProgress({ step: 2, total: 4, message: "Document analysis failed", status: 'error' })
+      throw error
+    }
+
+    // STEP 3: Privacy/Legal Scoring
+    sendProgress({ step: 3, total: 4, message: "Calculating privacy and legal scores...", status: 'in_progress' })
+    
+    try {
+      scoreResult = await privacyPolicyScorerTool.execute({ 
+        analysisResults: analysisResult.analysis,
+        documentType: documentType as any
+      })
+      if (scoreResult.success) {
+        sendProgress({ step: 3, total: 4, message: "Scoring completed", status: 'completed' })
+      } else {
+        throw new Error(scoreResult.error || "Failed to calculate scores")
+      }
+    } catch (error) {
+      sendProgress({ step: 3, total: 4, message: "Scoring failed", status: 'error' })
+      throw error
+    }
+
+    // STEP 4: Generate Final Summary
+    sendProgress({ step: 4, total: 4, message: "Generating final summary...", status: 'in_progress' })
+    
+    try {
+      const systemPrompt = `You are Clause AI, a legal document analyzer. Based on the analysis results provided, create a comprehensive but concise summary.
+
+DOCUMENT TYPE: ${documentType}
+WORD COUNT: ${analysisResult.wordCount}
+READING TIME: ${analysisResult.readingTimeMinutes} minutes
+
+Your response should be structured as follows:
+1. **Document Summary**: Brief overview of what this document covers
+2. **Key Findings**: Most important clauses and provisions
+3. **Risk Assessment**: High and medium risk factors identified
+4. **Privacy Score**: Overall score with breakdown
+5. **Recommendations**: Specific advice for users
+
+Be direct, informative, and focus on what users need to know to make informed decisions.`
+
+      const summaryResult = await generateText({
+        model: openai("gpt-4o-mini"),
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Please analyze this legal document analysis:
+
+ANALYSIS RESULTS:
+${JSON.stringify(analysisResult, null, 2)}
+
+SCORE RESULTS:
+${JSON.stringify(scoreResult, null, 2)}
+
+Create a comprehensive summary that helps users understand what they're agreeing to.` },
+        ],
+        abortSignal: controller.signal,
+      })
+      
+      sendProgress({ step: 4, total: 4, message: "Analysis complete", status: 'completed' })
+      
+      // Clear timeout on successful completion
+      clearTimeout(timeoutId)
+
+      // Prepare sources for frontend
+      const sources = []
+      
+      if (isUrl) {
+        sources.push({
+          title: analysisResult.title || "Legal Document",
+          snippet: `${documentType} document (${analysisResult.wordCount} words, ~${analysisResult.readingTimeMinutes} min read)`,
+          url: message,
+          source: documentType === "privacy" ? "Privacy Policy" : "Terms of Service",
+        })
+      } else {
+        sources.push({
+          title: "Pasted Legal Document",
+          snippet: `${documentType} document (${analysisResult.wordCount} words, ~${analysisResult.readingTimeMinutes} min read)`,
+          url: "#pasted-text",
+          source: "Pasted Text",
+        })
+      }
+
+      sources.push({
+        title: `Privacy Score: ${scoreResult.overallScore}/100`,
+        snippet: `Rating: ${scoreResult.rating} - ${scoreResult.recommendations?.length || 0} recommendations`,
+        url: "#score",
+        source: "Privacy Score",
+      })
+
+      // Prepare tool results for frontend
+      const toolResults = [
+        {
+          toolName: isUrl ? "urlContentFetcher" : "directTextAnalyzer",
+          result: analysisResult,
+          success: true,
+          error: undefined,
+        },
+        {
+          toolName: "termsAnalyzer",
+          result: analysisResult,
+          success: true,
+          error: undefined,
+        },
+        {
+          toolName: "privacyPolicyScorer",
+          result: scoreResult,
+          success: true,
+          error: undefined,
+        }
+      ]
+
+      return new Response(
+        JSON.stringify({
+          response: summaryResult.text,
+          sources: sources,
+          toolResults: toolResults,
+          progress: { step: 4, total: 4, message: "Analysis complete", status: 'completed' }
+        }),
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      )
+      
+    } catch (error) {
+      sendProgress({ step: 4, total: 4, message: "Failed to generate summary", status: 'error' })
+      throw error
+    }
+    
   } catch (error) {
     console.error("Chat API error:", error)
+    
+    // Handle specific error types
+    let errorMessage = "Failed to process request"
+    let status = 500
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorMessage = "Request timed out. Please try again with a shorter document."
+        status = 408
+      } else if (error.message.includes('fetch')) {
+        errorMessage = "Unable to fetch the document. Please check the URL and try again."
+        status = 400
+      } else if (error.message.includes('rate limit')) {
+        errorMessage = "Rate limit exceeded. Please wait a moment and try again."
+        status = 429
+      } else {
+        errorMessage = error.message
+      }
+    }
+    
     return new Response(
       JSON.stringify({
-        error: "Failed to process request",
+        error: errorMessage,
         details: error instanceof Error ? error.message : "Unknown error",
+        progress: { step: 0, total: 4, message: "Error occurred", status: 'error' }
       }),
       {
-        status: 500,
+        status: status,
         headers: { "Content-Type": "application/json" },
       },
     )
