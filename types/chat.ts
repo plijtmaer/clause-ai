@@ -36,54 +36,103 @@ export interface ChatMessageWithSources {
   createdAt: string | Date
 }
 
-// New types for Terms Analysis
+// Enhanced types for Legal Document Analysis
 export interface AnalysisSection {
   found: boolean
   details: string[]
   score: number
 }
 
-export interface TermsAnalysis {
+export interface LegalDocumentAnalysis {
   dataCollection: AnalysisSection
   userRights: AnalysisSection
   dataSharing: AnalysisSection
   security: AnalysisSection
+  contractTerms?: AnalysisSection
+  confidentialityTerms?: AnalysisSection
 }
 
-export interface PrivacyScoreBreakdown {
+export interface ScoreBreakdown {
   score: number
   maxScore: number
   description: string
 }
 
-export interface PrivacyScore {
+export interface ComprehensiveScore {
   overallScore: number
   rating: string
   color: string
   breakdown: {
-    dataCollection: PrivacyScoreBreakdown
-    userRights: PrivacyScoreBreakdown
-    dataSharing: PrivacyScoreBreakdown
-    security: PrivacyScoreBreakdown
+    dataCollection: ScoreBreakdown
+    userRights: ScoreBreakdown
+    dataSharing: ScoreBreakdown
+    security: ScoreBreakdown
+    contractTerms?: ScoreBreakdown
+    confidentialityTerms?: ScoreBreakdown
   }
+  riskFactors: string[]
+  riskPenalty: number
   recommendations: string[]
 }
 
 export interface DocumentAnalysis {
-  documentType: "terms" | "privacy" | "legal"
+  documentType: "terms" | "privacy" | "legal" | "nda" | "contract" | "eula" | "cookies"
   wordCount: number
   readingTimeMinutes: number
   summary: string
   keySections: string[]
-  analysis: TermsAnalysis
+  analysis: LegalDocumentAnalysis
+  riskFactors: string[]
 }
 
 export interface FetchedDocument {
   success: boolean
   url: string
   title: string
-  documentType: "terms" | "privacy" | "legal"
+  documentType: "terms" | "privacy" | "legal" | "nda" | "contract" | "eula" | "cookies"
   content: string
   wordCount: number
   readingTimeMinutes: number
 }
+
+// Risk Assessment Types
+export interface RiskFactor {
+  level: "High" | "Medium" | "Low"
+  description: string
+  category: "data" | "security" | "terms" | "privacy"
+}
+
+export interface DocumentRisk {
+  overallRisk: "High" | "Medium" | "Low"
+  factors: RiskFactor[]
+  recommendations: string[]
+}
+
+// Document Type Specific Types
+export interface NDAnalysis extends DocumentAnalysis {
+  documentType: "nda"
+  confidentialityScope: string[]
+  restrictionPeriod: string
+  obligations: string[]
+}
+
+export interface ContractAnalysis extends DocumentAnalysis {
+  documentType: "contract"
+  obligations: string[]
+  liabilityTerms: string[]
+  terminationClauses: string[]
+  paymentTerms: string[]
+}
+
+export interface PrivacyPolicyAnalysis extends DocumentAnalysis {
+  documentType: "privacy"
+  dataTypes: string[]
+  retentionPeriod: string
+  userRights: string[]
+  thirdPartySharing: string[]
+}
+
+// Legacy types for backward compatibility
+export interface TermsAnalysis extends LegalDocumentAnalysis {}
+export interface PrivacyScore extends ComprehensiveScore {}
+export interface PrivacyScoreBreakdown extends ScoreBreakdown {}

@@ -8,7 +8,7 @@ import Input from "@/components/ui/input"
 import Card from "@/components/ui/card"
 import Badge from "@/components/ui/badge"
 import type { Message } from "@/types/chat"
-import { Send, User, Bot, ExternalLink, CheckCircle, XCircle, Loader2, Shield, FileText, BarChart3 } from "lucide-react"
+import { Send, User, Bot, ExternalLink, CheckCircle, XCircle, Loader2, Shield, FileText, BarChart3, Link, Type } from "lucide-react"
 
 interface ChatProps {
   onSendMessage: (message: string) => void
@@ -19,6 +19,7 @@ interface ChatProps {
 
 export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatProps) {
   const [input, setInput] = useState("")
+  const [inputMode, setInputMode] = useState<"url" | "text">("url")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessageCount = useRef(0)
 
@@ -41,9 +42,52 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
     }
   }
 
+  const validateInput = () => {
+    if (inputMode === "url") {
+      const url = input.trim()
+      try {
+        new URL(url)
+        return url.startsWith("http://") || url.startsWith("https://")
+      } catch {
+        return false
+      }
+    } else {
+      const text = input.trim()
+      return text.length > 20 && text.split(' ').length > 3 // Minimum meaningful text
+    }
+  }
+
+  const getValidationMessage = () => {
+    if (!input.trim()) return null
+    
+    if (inputMode === "url") {
+      const url = input.trim()
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        return "⚠️ Please enter a valid URL starting with http:// or https://"
+      }
+      try {
+        new URL(url)
+        return "✅ Valid URL"
+      } catch {
+        return "⚠️ Please enter a valid URL"
+      }
+    } else {
+      const text = input.trim()
+      if (text.length < 20) {
+        return "⚠️ Please enter at least 20 characters"
+      }
+      if (text.split(' ').length < 3) {
+        return "⚠️ Please enter meaningful text (at least 3 words)"
+      }
+      return "✅ Ready to analyze"
+    }
+  }
+
   const getToolIcon = (toolName: string) => {
     switch (toolName) {
       case "urlContentFetcher":
+        return <FileText className="w-4 h-4" />
+      case "directTextAnalyzer":
         return <FileText className="w-4 h-4" />
       case "termsAnalyzer":
         return <Shield className="w-4 h-4" />
@@ -51,6 +95,21 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
         return <BarChart3 className="w-4 h-4" />
       default:
         return <CheckCircle className="w-4 h-4" />
+    }
+  }
+
+  const getToolDisplayName = (toolName: string) => {
+    switch (toolName) {
+      case "urlContentFetcher":
+        return "Document Fetcher"
+      case "directTextAnalyzer":
+        return "Text Processor"
+      case "termsAnalyzer":
+        return "Legal Analyzer"
+      case "privacyPolicyScorer":
+        return "Document Scorer"
+      default:
+        return toolName.replace(/([A-Z])/g, " $1").trim()
     }
   }
 
@@ -68,7 +127,7 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
       <div className="mt-4 p-4 bg-white/5 rounded-lg border border-white/10">
         <div className="flex items-center gap-2 mb-3">
           <BarChart3 className="w-5 h-5 text-blue-400" />
-          <h4 className="font-semibold text-white">Privacy Score</h4>
+          <h4 className="font-semibold text-white">Document Score</h4>
         </div>
 
         <div className="text-center mb-4">
@@ -87,11 +146,41 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
           ))}
         </div>
 
+        {/* Risk Factors */}
+        {score.riskFactors && score.riskFactors.length > 0 && (
+          <div className="mb-4">
+            <h5 className="font-medium text-white mb-2 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-red-400" />
+              Risk Factors ({score.riskFactors.length})
+            </h5>
+            <div className="space-y-1">
+              {score.riskFactors.slice(0, 3).map((risk: string, idx: number) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    risk.startsWith('High') ? 'bg-red-500/20 text-red-300' :
+                    risk.startsWith('Medium') ? 'bg-yellow-500/20 text-yellow-300' :
+                    'bg-blue-500/20 text-blue-300'
+                  }`}>
+                    {risk.split(':')[0]}
+                  </span>
+                  <span className="text-xs text-white/60">{risk.split(':')[1]?.trim()}</span>
+                </div>
+              ))}
+              {score.riskFactors.length > 3 && (
+                <div className="text-xs text-white/40 mt-2">
+                  +{score.riskFactors.length - 3} more risks identified
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Recommendations */}
         {score.recommendations && score.recommendations.length > 0 && (
           <div>
             <h5 className="font-medium text-white mb-2">Recommendations:</h5>
             <ul className="text-sm text-white/70 space-y-1">
-              {score.recommendations.slice(0, 3).map((rec: string, idx: number) => (
+              {score.recommendations.slice(0, 4).map((rec: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-2">
                   <span className="text-blue-400 mt-1">•</span>
                   {rec}
@@ -104,14 +193,23 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
     )
   }
 
-  return messages.length === 0 && !isLoading ? (
-    <div className="h-32 max-h-32 overflow-hidden flex items-center justify-center text-white/70 text-sm border border-white/20 rounded-2xl bg-white/5 backdrop-blur-sm">
-      Ready to analyze — paste a URL to begin.
-    </div>
-  ) : (
-    <div className="flex flex-col h-full max-h-full bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
+  return (
+    <div className="flex flex-col h-full bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4" style={{ minHeight: '500px', maxHeight: '70vh' }}>
+        {messages.length === 0 && !isLoading && (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center text-white/70 text-sm">
+              <div className="mb-4">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <FileText className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-lg font-medium text-white mb-2">Ready to analyze</h3>
+                <p className="text-white/60">Choose URL or Text mode below to begin analyzing your legal document.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {messages.map((message, index) => (
           <div key={index} className="space-y-4">
@@ -133,7 +231,7 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
                 {message.toolResults.map((tool, toolIndex) => (
                   <div key={toolIndex} className="flex items-center gap-2 text-sm">
                     {getToolIcon(tool.toolName)}
-                    <span className="text-white/70 capitalize">{tool.toolName.replace(/([A-Z])/g, " $1").trim()}</span>
+                    <span className="text-white/70">{getToolDisplayName(tool.toolName)}</span>
                     {tool.success ? (
                       <CheckCircle className="w-4 h-4 text-green-400" />
                     ) : (
@@ -235,23 +333,83 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
       </div>
 
       {/* Input */}
-      <div className="p-6 border-t border-white/10">
-        <form onSubmit={handleSubmit} className="flex gap-3">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Paste a privacy policy or terms of service URL..."
-            disabled={isLoading}
-            className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20"
-          />
+      <div className="flex-shrink-0 p-6 border-t border-white/10 bg-white/5">
+        {/* Mode Selector */}
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              setInputMode("url")
+              setInput("")
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              inputMode === "url"
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/15 hover:text-white"
+            }`}
+          >
+            <Link className="w-4 h-4" />
+            URL
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setInputMode("text")
+              setInput("")
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              inputMode === "text"
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/15 hover:text-white"
+            }`}
+          >
+            <Type className="w-4 h-4" />
+            Text
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex gap-4 items-end">
+          {inputMode === "url" ? (
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Paste document URL (e.g., https://example.com/privacy-policy)"
+              disabled={isLoading}
+              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20 h-12"
+            />
+          ) : (
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Paste legal document text here (Privacy Policy, Terms of Service, NDA, Contract, EULA, etc.)"
+              disabled={isLoading}
+              rows={5}
+              className="flex-1 bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-md px-3 py-2 resize-none"
+            />
+          )}
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 px-6 rounded-md flex items-center justify-center"
+            disabled={!input.trim() || isLoading || !validateInput()}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 px-8 py-3 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed self-end min-w-[80px]"
           >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
         </form>
+
+        {/* Helper text */}
+        <div className="mt-3 text-sm text-white/60">
+          {getValidationMessage() ? (
+            <span className={getValidationMessage()?.startsWith("✅") ? "text-green-400 font-medium" : "text-yellow-400 font-medium"}>
+              {getValidationMessage()}
+            </span>
+          ) : (
+            inputMode === "url" ? (
+              <span>📄 Paste a URL to fetch and analyze a legal document</span>
+            ) : (
+              <span>📝 Paste the full text of a legal document to analyze</span>
+            )
+          )}
+        </div>
       </div>
     </div>
   )
