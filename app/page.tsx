@@ -4,6 +4,7 @@ import { useState } from "react"
 import Chat from "@/components/chat"
 import type { Message } from "@/types/chat"
 import { Shield, FileText, Brain, BarChart3, Sparkles, Zap } from "lucide-react"
+import AuthProvider from "@/components/auth-provider"
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -101,75 +102,77 @@ export default function Home() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-      </div>
+    <AuthProvider>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+          <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+        </div>
 
-      {/* Grid Pattern Overlay */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-40"></div>
+        {/* Grid Pattern Overlay */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-40"></div>
 
-      <div className="relative z-10">
-        <div className="container mx-auto px-4 py-6">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 mb-6 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-              <Sparkles className="w-5 h-5 text-yellow-400" />
-              <span className="text-white/90 font-medium">AI-Powered Legal Analysis</span>
-              <Zap className="w-5 h-5 text-blue-400" />
+        <div className="relative z-10">
+          <div className="container mx-auto px-4 py-6">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-3 mb-6 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
+                <Sparkles className="w-5 h-5 text-yellow-400" />
+                <span className="text-white/90 font-medium">AI-Powered Legal Analysis</span>
+                <Zap className="w-5 h-5 text-blue-400" />
+              </div>
+
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent mb-4 leading-tight">
+                Clause AI
+                <br />
+                <span className="text-2xl">Analyzer</span>
+              </h1>
+
+              <p className="text-lg text-white/70 max-w-2xl mx-auto leading-relaxed mb-8">
+                Decode complex legal documents with AI. Analyze privacy policies, terms of service, NDAs, contracts, and
+                EULAs to understand risks and protect your rights.
+              </p>
             </div>
 
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent mb-4 leading-tight">
-              Clause AI
-              <br />
-              <span className="text-2xl">Analyzer</span>
-            </h1>
-
-            <p className="text-lg text-white/70 max-w-2xl mx-auto leading-relaxed mb-8">
-              Decode complex legal documents with AI. Analyze privacy policies, terms of service, NDAs, contracts, and
-              EULAs to understand risks and protect your rights.
-            </p>
-          </div>
-
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {features.map((feature, index) => (
-              <div
-                key={feature.title}
-                className="group relative bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-500 hover:scale-105 hover:-translate-y-2"
-                style={{ animationDelay: feature.delay }}
-              >
+            {/* Features Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {features.map((feature, index) => (
                 <div
-                  className={`w-12 h-12 rounded-xl bg-gradient-to-r ${feature.color} p-3 mb-4 group-hover:scale-110 transition-transform duration-300`}
+                  key={feature.title}
+                  className="group relative bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-500 hover:scale-105 hover:-translate-y-2"
+                  style={{ animationDelay: feature.delay }}
                 >
-                  <feature.icon className="w-full h-full text-white" />
+                  <div
+                    className={`w-12 h-12 rounded-xl bg-gradient-to-r ${feature.color} p-3 mb-4 group-hover:scale-110 transition-transform duration-300`}
+                  >
+                    <feature.icon className="w-full h-full text-white" />
+                  </div>
+
+                  <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-purple-200 transition-colors">
+                    {feature.title}
+                  </h3>
+
+                  <p className="text-white/60 text-sm leading-relaxed group-hover:text-white/80 transition-colors">
+                    {feature.description}
+                  </p>
+
+                  {/* Hover Glow Effect */}
+                  <div
+                    className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${feature.color} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-xl`}
+                  ></div>
                 </div>
+              ))}
+            </div>
 
-                <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-purple-200 transition-colors">
-                  {feature.title}
-                </h3>
-
-                <p className="text-white/60 text-sm leading-relaxed group-hover:text-white/80 transition-colors">
-                  {feature.description}
-                </p>
-
-                {/* Hover Glow Effect */}
-                <div
-                  className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${feature.color} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-xl`}
-                ></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Chat Interface */}
-          <div className="mt-8">
-            <Chat onSendMessage={handleSendMessage} messages={messages} isLoading={isLoading} mode="terms" />
+            {/* Chat Interface */}
+            <div className="mt-8">
+              <Chat onSendMessage={handleSendMessage} messages={messages} isLoading={isLoading} mode="terms" />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </AuthProvider>
   )
 }

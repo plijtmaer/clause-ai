@@ -20,8 +20,9 @@
 ### 🎯 **Intelligent Input Processing**
 - **URL Analysis**: Automatically fetches and analyzes documents from URLs
 - **Text Input**: Process pasted document content directly
+- **File Upload**: Upload PDF and DOCX files with drag-and-drop functionality
 - **Smart Detection**: Automatically detects document type and content structure
-- **Input Validation**: Real-time validation for URLs and text content
+- **Input Validation**: Real-time validation for URLs, text content, and file types
 
 ### 📊 **Comprehensive Scoring System**
 - **Privacy Score**: Weighted scoring based on document type
@@ -36,16 +37,23 @@
 - **Timeout Management**: 90-second timeout with proper error handling
 
 ### 🎨 **Modern UI/UX**
-- **Dual Input Modes**: Toggle between URL and text input
+- **Triple Input Modes**: Toggle between URL, text, and file input
 - **Progress Visualization**: Real-time progress bar with step indicators
 - **Responsive Design**: Works seamlessly on all device sizes
 - **Elegant Interface**: Modern glass-morphism design with smooth animations
+
+### 🔐 **User Authentication & Management**
+- **Mandatory Authentication**: Required login on app entry for all features
+- **Supabase Auth Integration**: Secure email/password authentication
+- **User Sessions**: Persistent login state across browser sessions  
+- **User Dashboard**: Comprehensive analytics and document history
+- **RAG Storage**: All documents (URL, text, files) stored with embeddings
 
 ## 🏗️ Architecture
 
 ### Backend Flow
 ```
-1. Content Extraction (URLs/Text) → 2. Document Analysis → 3. Privacy Scoring → 4. AI Summary Generation
+1. Content Extraction (URLs/Text/Files) → 2. Document Analysis → 3. Privacy Scoring → 4. RAG Storage → 5. AI Summary Generation
 ```
 
 ### Key Components
@@ -79,17 +87,62 @@
 3. **Environment Setup**
    Create a `.env.local` file in the root directory:
    ```env
+   # OpenAI Configuration
    OPENAI_API_KEY=your_openai_api_key_here
+   
+   # Supabase Configuration (required for file uploads and authentication)
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   
+   # Optional: For additional vectorize features
+   VECTORIZE_API_KEY=your_vectorize_api_key_here
    ```
 
-4. **Start the development server**
+4. **Supabase Database Setup** (for file upload functionality and authentication)
+   
+   **Option A: Quick Setup**
+   Run the complete setup script from `supabase-setup.sql` in your Supabase SQL Editor.
+   
+   **Option B: Manual Setup**
+   Run this SQL in your Supabase SQL Editor:
+   ```sql
+   -- Enable the pgvector extension
+   create extension if not exists vector;
+   
+   -- Create the document_chunks table
+   create table if not exists public.document_chunks (
+     id uuid primary key default gen_random_uuid(),
+     user_id uuid not null references auth.users(id) ON DELETE CASCADE,
+     doc_id uuid not null,
+     content text not null,
+     embedding vector(1536),
+     chunk_index int,
+     created_at timestamp default now()
+   );
+   
+   -- Enable Row Level Security
+   alter table public.document_chunks enable row level security;
+   
+   -- Create policy for users to access their own documents
+   create policy "Users can access their own document chunks"
+   on public.document_chunks for all
+   using (auth.uid() = user_id);
+   
+   -- Create performance indexes
+   create index idx_document_chunks_user_id on public.document_chunks(user_id);
+   create index idx_document_chunks_embedding on public.document_chunks 
+   using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+   ```
+
+5. **Start the development server**
    ```bash
    npm run dev
    # or
    pnpm run dev
    ```
 
-5. **Access the application**
+6. **Access the application**
    Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## 💡 Usage
@@ -108,6 +161,39 @@
 4. Monitor the analysis progress
 5. Get detailed insights and recommendations
 
+### File Upload Analysis
+1. Select the "File" tab
+2. Drag and drop a PDF or DOCX file (max 10MB)
+3. Click "Process Document"
+4. Watch real-time progress: Upload → Text Extraction → Chunking → Embeddings → Storage
+5. Automatic analysis begins once processing is complete
+
+### Dashboard Access
+1. Click the dashboard icon in the top-right user menu
+2. View comprehensive analytics and KPIs
+3. Browse document history with scores and risk levels
+4. Track analysis trends and statistics
+5. Access all your previously analyzed documents
+
+## 🔐 **Authenticated Features (Required Login)**
+
+All users must create a free account to access Clause AI. Once authenticated, you get:
+
+### **Core Analysis Features**
+- ✅ **URL Analysis**: Analyze documents from any public URL with RAG storage
+- ✅ **Text Analysis**: Paste and analyze document content with RAG storage  
+- ✅ **File Upload**: Upload PDF and DOCX documents (max 10MB)
+- ✅ **Full AI Analysis**: Complete legal analysis with scoring and recommendations
+- ✅ **Real-time Processing**: 5-step analysis with progress tracking
+
+### **Advanced RAG & Dashboard Features**
+- ✅ **Document Storage**: All documents stored securely with embeddings
+- ✅ **RAG Functionality**: Advanced document search and comparison capabilities
+- ✅ **Document History**: Access previously analyzed documents
+- ✅ **Analytics Dashboard**: Comprehensive KPIs and document statistics
+- ✅ **Risk Tracking**: Monitor high-risk documents and trends
+- ✅ **Score Analytics**: Track average scores and analysis patterns
+
 ### Analysis Results
 - **Document Summary**: Clear overview in plain language
 - **Key Findings**: Important clauses and provisions
@@ -120,6 +206,10 @@
 ### Technology Stack
 - **Frontend**: Next.js 15.3.3, React 19.1.0, TypeScript
 - **Backend**: Next.js API Routes, OpenAI GPT-4o-mini
+- **Database**: Supabase with pgvector for embeddings storage
+- **File Processing**: pdf-parse, mammoth for document extraction
+- **Text Processing**: LangChain for semantic chunking
+- **Embeddings**: OpenAI text-embedding-3-small
 - **Styling**: Tailwind CSS with custom animations
 - **Icons**: Lucide React
 - **Package Manager**: pnpm
@@ -132,9 +222,11 @@
 - **Responsive Design**: Mobile-first approach
 
 ### API Endpoints
-- `POST /api/chat` - Main document analysis endpoint
-- Supports both URL and text-based document processing
+- `POST /api/chat` - Main document analysis endpoint with RAG storage
+- `POST /api/upload` - File upload endpoint for PDF/DOCX processing
+- Supports URL, text, and file-based document processing
 - Returns structured analysis results with progress tracking
+- Automatic RAG storage for all authenticated users
 
 ## 🎯 Scoring System
 

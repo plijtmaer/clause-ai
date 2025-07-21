@@ -8,8 +8,9 @@ import Input from "@/components/ui/input"
 import Card from "@/components/ui/card"
 import Badge from "@/components/ui/badge"
 import type { Message } from "@/types/chat"
-import { Send, User, Bot, ExternalLink, CheckCircle, XCircle, Loader2, Shield, FileText, BarChart3, Link, Type } from "lucide-react"
+import { Send, User, Bot, ExternalLink, CheckCircle, XCircle, Loader2, Shield, FileText, BarChart3, Link, Type, Upload } from "lucide-react"
 import ProgressStatus from "@/components/progress-status"
+import DocumentUpload from "@/components/document-upload"
 
 interface ChatProps {
   onSendMessage: (message: string) => void
@@ -20,8 +21,13 @@ interface ChatProps {
 
 export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatProps) {
   const [input, setInput] = useState("")
-  const [inputMode, setInputMode] = useState<"url" | "text">("url")
+  const [inputMode, setInputMode] = useState<"url" | "text" | "file">("url")
   const [progress, setProgress] = useState<{ step: number; total: number; message: string; status: 'pending' | 'in_progress' | 'completed' | 'error' } | null>(null)
+  const [uploadedDocument, setUploadedDocument] = useState<{
+    docId: string
+    fileName: string
+    chunksCreated: number
+  } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessageCount = useRef(0)
 
@@ -66,6 +72,29 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
       const text = input.trim()
       return text.length > 20 && text.split(' ').length > 3 // Minimum meaningful text
     }
+  }
+
+  const handleUploadSuccess = (result: {
+    docId: string
+    fileName: string
+    fileType: string
+    textLength: number
+    chunksCreated: number
+    chunksInserted: number
+  }) => {
+    setUploadedDocument({
+      docId: result.docId,
+      fileName: result.fileName,
+      chunksCreated: result.chunksCreated
+    })
+    
+    // Trigger analysis of uploaded document
+    onSendMessage(`Analyze uploaded document: ${result.fileName} (${result.chunksCreated} chunks processed)`)
+  }
+
+  const handleUploadError = (error: string) => {
+    console.error('Upload error:', error)
+    // Error is already handled by the DocumentUpload component
   }
 
   const getValidationMessage = () => {
@@ -216,7 +245,12 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
                   <FileText className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-lg font-medium text-white mb-2">Ready to analyze</h3>
-                <p className="text-white/60">Choose URL or Text mode below to begin analyzing your legal document.</p>
+                <p className="text-white/60">Choose URL, Text, or File mode below to begin analyzing your legal document.</p>
+                <div className="mt-4 p-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-400/30 rounded-lg">
+                  <p className="text-purple-200 text-xs">
+                    💾 <strong>Info:</strong> All your documents are automatically stored for future reference in your dashboard!
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -360,6 +394,7 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
             onClick={() => {
               setInputMode("url")
               setInput("")
+              setUploadedDocument(null)
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               inputMode === "url"
@@ -375,6 +410,7 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
             onClick={() => {
               setInputMode("text")
               setInput("")
+              setUploadedDocument(null)
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               inputMode === "text"
@@ -385,50 +421,88 @@ export default function Chat({ onSendMessage, messages, isLoading, mode }: ChatP
             <Type className="w-4 h-4" />
             Text
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setInputMode("file")
+              setInput("")
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              inputMode === "file"
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/15 hover:text-white"
+            }`}
+          >
+            <Upload className="w-4 h-4" />
+            File
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex gap-4 items-end">
-          {inputMode === "url" ? (
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Paste document URL (e.g., https://example.com/privacy-policy)"
-              disabled={isLoading}
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20 h-12"
-            />
-          ) : (
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Paste legal document text here (Privacy Policy, Terms of Service, NDA, Contract, EULA, etc.)"
-              disabled={isLoading}
-              rows={5}
-              className="flex-1 bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-md px-3 py-2 resize-none"
-            />
-          )}
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading || !validateInput()}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 px-8 py-3 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed self-end min-w-[80px]"
-          >
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </button>
-        </form>
+        {inputMode === "file" ? (
+          <DocumentUpload
+            onUploadSuccess={handleUploadSuccess}
+            onUploadError={handleUploadError}
+            className="mb-4"
+          />
+        ) : (
+          <form onSubmit={handleSubmit} className="flex gap-4 items-end">
+            {inputMode === "url" ? (
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Paste document URL (e.g., https://example.com/privacy-policy)"
+                disabled={isLoading}
+                className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20 h-12"
+              />
+            ) : (
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Paste legal document text here (Privacy Policy, Terms of Service, NDA, Contract, EULA, etc.)"
+                disabled={isLoading}
+                rows={5}
+                className="flex-1 bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20 rounded-md px-3 py-2 resize-none"
+              />
+            )}
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading || !validateInput()}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 px-8 py-3 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed self-end min-w-[80px]"
+            >
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+            </button>
+          </form>
+        )}
 
         {/* Helper text */}
-        <div className="mt-3 text-sm text-white/60">
-          {getValidationMessage() ? (
-            <span className={getValidationMessage()?.startsWith("✅") ? "text-green-400 font-medium" : "text-yellow-400 font-medium"}>
-              {getValidationMessage()}
-            </span>
-          ) : (
-            inputMode === "url" ? (
-              <span>📄 Paste a URL to fetch and analyze a legal document</span>
+        {inputMode !== "file" && (
+          <div className="mt-3 text-sm text-white/60">
+            {getValidationMessage() ? (
+              <span className={getValidationMessage()?.startsWith("✅") ? "text-green-400 font-medium" : "text-yellow-400 font-medium"}>
+                {getValidationMessage()}
+              </span>
             ) : (
-              <span>📝 Paste the full text of a legal document to analyze</span>
-            )
-          )}
-        </div>
+              inputMode === "url" ? (
+                <span>📄 Paste a URL to fetch and analyze a legal document</span>
+              ) : (
+                <span>📝 Paste the full text of a legal document to analyze</span>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Uploaded Document Info */}
+        {uploadedDocument && (
+          <div className="mt-3 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+            <div className="flex items-center gap-2 text-green-300 text-sm">
+              <CheckCircle className="w-4 h-4" />
+              <span>Document "{uploadedDocument.fileName}" uploaded successfully</span>
+            </div>
+            <p className="text-green-200/70 text-xs mt-1">
+              {uploadedDocument.chunksCreated} chunks processed and ready for analysis
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
