@@ -295,4 +295,43 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
+## 📸 **Screenshots**
+
+### Authentication & Onboarding
+<img src="docs/screenshots/1-sign-in-required.png" alt="Mandatory Sign In Required" width="600"/>
+
+*Mandatory authentication modal with elegant design and clear call-to-action*
+
+### Main Interface - Clean Design
+<img src="docs/screenshots/2-ui-1.png" alt="Main Interface" width="800"/>
+
+*Beautiful main interface with gradient background and feature showcase*
+
+### Triple Input Modes
+<img src="docs/screenshots/3-ui-2-functionalities.png" alt="URL, Text & File Functionalities" width="800"/>
+
+*Triple input modes: URL, Text, and File upload with intuitive mode selection*
+
+### URL Analysis Mode
+<img src="docs/screenshots/4-url-mode.png" alt="URL Analysis Mode" width="700"/>
+
+*URL input mode with real-time validation and analysis capabilities*
+
+### Analysis in Progress  
+<img src="docs/screenshots/5-loading.png" alt="Analysis Loading" width="700"/>
+
+*5-step analysis process with real-time progress tracking and status updates*
+
+### Analysis Results & Scoring
+<img src="docs/screenshots/6-score-end-of-analysis.png" alt="Score and Analysis Results" width="800"/>
+
+*Comprehensive analysis with detailed scoring, risk assessment, and actionable recommendations*
+
+### Dashboard Analytics
+<img src="docs/screenshots/7-dashboard.png" alt="Dashboard Analytics" width="800"/>
+
+*Analytics dashboard with KPIs, document history, and comprehensive trend analysis*
+
+---
+
 **Made with ❤️ by the Clause AI Team**
